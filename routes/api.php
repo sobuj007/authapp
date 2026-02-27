@@ -10,7 +10,7 @@ Route::get('/user', function (Request $request) {
 
 
 Route::prefix('v1')->group(function () {
-    Route::post('/reigster', [AuthController::class, 'register']);
+    Route::post('reigster', [AuthController::class, 'register']);
     Route::post('login', [AuthController::class, 'login']);
     Route::post('forget-password', [AuthController::class, 'forgetpassword']);
     Route::post('reset-password', [AuthController::class, 'resetpassword']);
