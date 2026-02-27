@@ -10,20 +10,17 @@ use Illuminate\Mail\Mailables\Content;
 use Illuminate\Mail\Mailables\Envelope;
 use Illuminate\Queue\SerializesModels;
 
-class RegistraionCode extends Mailable
+class RegistrationVerificationSuccess extends Mailable
 {
     use Queueable, SerializesModels;
 
     /**
      * Create a new message instance.
      */
-
-    protected $code,$user;
-    
-    public function __construct($user,$code)
+    protected $user;
+    public function __construct($user)
     {
-        $this -> code = $code;
-        $this -> user = $user;
+        $this ->user =$user;
     }
 
     /**
@@ -32,9 +29,9 @@ class RegistraionCode extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Registraion Code',
-            to:[new Address($this->user->email)],
-            from:new Address('cc@Authapp.test', 'AuthApp0-admin')
+            subject: 'Registration Verification Success',
+            to: [new Address($this ->user->email)],
+            from: new Address('authapp@test.com', 'AuthApp-admin')
         );
     }
 
@@ -44,11 +41,7 @@ class RegistraionCode extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.registration-verification-code',
-            with: [
-                'code' => $this->code,
-                'user' => $this->user
-            ]   
+            view: 'emails.registration-verification-success',
         );
     }
 
