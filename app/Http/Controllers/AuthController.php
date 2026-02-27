@@ -7,18 +7,20 @@ use App\Mail\RegistrationVerificationSuccess;
 use App\Models\RegstrationVerificationCode;
 use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
     //
 
- function gettest(){
+    function gettest()
+    {
         return response()->json([
             'success' => true,
             'message' => 'Test API endpoint is working'
         ], 200);
- }
+    }
     function register(Request $request)
     {
 
@@ -75,60 +77,93 @@ class AuthController extends Controller
     }
 
 
-    function verifyUser(Request $request){
-        $request ->validate([
+    function verifyUser(Request $request)
+    {
+        $request->validate([
             'email' => 'required | string | max:256 | exists:users,email',
             'code' => 'required | string | max:6'
         ]);
-        $validCode = RegstrationVerificationCode::where('email', $request->email)
-        ->where('code', $request->code)
-        ->first();
+
 
         try {
-            if($validCode -> update_at ->diffInMinutes(now())>env('VERIFICATION_CODE_EXPIRE_TIME',10)){
+            $validCode = RegstrationVerificationCode::where('email', $request->email)
+                ->where('code', $request->code)
+                ->first();
+            if ($validCode->updated_at->diffInMinutes(now()) > env('VERIFICATION_CODE_EXPIRE_TIME', 10)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Verification code has expired'
                 ]);
-            }
-            else{
-                $user = User::where('email',$request -> email)->first();
-                $user -> update([
-                    'email_verified-at' => now()
+            } else {
+                $user = User::where('email', $request->email)->first();
+                $user->update([
+                    'email_verified_at' => now()
                 ]);
-              
-                 if(Mail::send(new RegistrationVerificationSuccess($user))){
-                      $validCode -> delete();
+
+                if (Mail::send(new RegistrationVerificationSuccess($user))) {
+                    $validCode->delete();
                     return response()->json([
                         'success' => true,
                         'message' => 'Email verified successfully'
                     ]);
-                 }
-                 else{
+                } else {
                     return response()->json([
                         'success' => false,
                         'message' => 'Failed to send registration verification success email'
                     ]);
-                 }
-
-
+                }
             }
-              return response()->json([
-                        'success' => false,
-                        'message' => 'Somting went wrong'
-                    ]);
+
 
             //code...
         } catch (\Throwable $th) {
             //throw $th;
-                return response()->json([
-                            'success' => false,
-                            'message' => 'Somting went wrong',
-                            'error' => $th->getMessage()
-                        ]);
+            return response()->json([
+                'success' => false,
+                'message' => 'Somting went wrong',
+                'error' => $th->getMessage()
+            ]);
         }
-
-
-
     }
+
+
+  function login(Request $request){
+    $request -> validate([
+        'email' => 'required | string | max:256 | exists:users,email',
+        'password' =>'required | string | min:6'
+    ]);
+
+    try {
+        if(!Auth::attempt($request -> only('email','password'))){
+            return  response() -> json([
+                'success' => false,
+                'message' => 'Invalid email or password']);
+        }
+        else{
+            $user = User::where('email', $request -> email)-> where('password', bcrypt($request -> password))->first();
+        $token = $user -> createToken('authapp') -> plainTextToken;
+        return response() ->json([
+            'success' => true,
+            'message' => 'Login successful',
+           'data' =>[
+            'info'=> $user,
+            'token' => $token
+           ]
+
+           ]);
+
+        }
+        
+
+
+    } catch (\Throwable $th) {
+        //throw $th;
+        return response()->json([
+            'success' => false,
+            'message' => 'Login failed',
+            'error' => $th->getMessage()
+        ]); 
+    }
+
+  }
 }

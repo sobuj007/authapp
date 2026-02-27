@@ -41,7 +41,10 @@ class RegistrationVerificationSuccess extends Mailable
     public function content(): Content
     {
         return new Content(
-            view: 'emails.registration-verification-success',
+            view: 'emails.registration-success-mail',
+            with:[
+                'user' =>$this -> user
+            ]
         );
     }
 
