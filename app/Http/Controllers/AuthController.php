@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\UserResource;
 use App\Mail\RegistraionCode;
 use App\Mail\RegistrationVerificationSuccess;
+use App\Models\PasswordResetCode;
 use App\Models\RegstrationVerificationCode;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -265,8 +266,8 @@ class AuthController extends Controller
 
     function changePassword(Request $request)
     {
-        $request->validation([
-            'current_password' => 'required | sting |. max:256',
+        $request->validate([
+            'current_password' => 'required | string | max:256',
             'new_password' => 'required | string | min:6 | confirmed',
             'new_password_confirmation' => 'required | string | min:6'
 
@@ -306,5 +307,92 @@ class AuthController extends Controller
     }
 
 
-    
+    function forgetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required | string |max:256'
+        ]);
+
+        try {
+            //code...
+            $code = rand(000000, 999999);
+            $user = User::where('email', $request->email)->first();
+            if (Mail::send(new RegistraionCode($user, $code))) {
+                PasswordResetCode::updateOrCreate([
+                    'email' => $user->email
+
+                ], [
+                    'code' => $code
+                ]);
+
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Code sended to your mail!'
+                ]);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found!'
+            ]);
+        } catch (\Throwable $th) {
+            //throw $th;
+
+            return response()->json([
+                'success' => true,
+                'message' => $th->getMessage()
+            ]);
+        }
+    }
+
+    /***
+     * Password reset
+     */
+
+    function resetPassword(Request $request)
+    {
+        $request->validate([
+            'email' => 'required | string | max:256',
+            'code' => 'required | string | min:6',
+            'new_password' => 'required | string| min:6 | confirmed',
+            'new_password_confirmation' => 'required | string | min: 6'
+        ]);
+
+        try {
+            //code...
+            $validCode = PasswordResetCode::where('email', $request->email)->where('code', $request->code)->first();
+
+            if ($validCode->updated_at->diffInMinutes(now()) > env('VERIFICATION_CODE_EXPIRE_TIME', 10)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Verification code has expired'
+                ]);
+            } else {
+                $user = User::where('email', $request->email)->first();
+                if ($user) {
+                    $user->update([
+                        'password' => bcrypt($request->new_password)
+                    ]);
+
+                    if (Mail::send(new RegistrationVerificationSuccess($user))) {
+                        $validCode->delete();
+                        return response()->json([
+                            'success' => true,
+                            'message' => 'Password reset successfully'
+                        ]);
+                    }
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not found'
+                ]);
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json([
+                'success' => false,
+                'message' => 'Password reset failed',
+                'error' => $th->getMessage()
+            ]);
+        }
+    }
 }
