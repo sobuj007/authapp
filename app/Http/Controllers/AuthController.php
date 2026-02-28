@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Http\Resources\UserResource;
 use App\Mail\RegistraionCode;
 use App\Mail\RegistrationVerificationSuccess;
 use App\Models\RegstrationVerificationCode;
@@ -150,7 +151,7 @@ class AuthController extends Controller
                     'success' => true,
                     'message' => 'Login successful',
                     'data' => [
-                        'info' => $user,
+                        'info' => new UserResource($user),
                         'token' => $token
                     ]
 
@@ -165,7 +166,7 @@ class AuthController extends Controller
             ]);
         }
     }
-    
+
     /***
      *  user edit .........
      */
@@ -174,8 +175,8 @@ class AuthController extends Controller
     {
         $request->validate([
             'name' => 'required | string | max:256',
-            'email' => 'required | string | max:256 | unique:users,email,' . Auth::id(),
-            'image' => 'nullable | string | image'
+
+            'image' => 'nullable | image'
 
         ]);
 
@@ -185,21 +186,29 @@ class AuthController extends Controller
              */
 
             $user = Auth::user();
-            $filname = $user->image;
+
+            $filename = $user->image;
+
             if ($request->file('image')) {
-                Storage::delete($filname);
-                $filename = time().'--'.str_replace('','-',$request ->file('image') -> getClientOriginalName());
-                Storage::putFileAs('/',$$request ->file('image'),$filename);
+
+                Storage::delete($filename);
+
+
+                $filename = time() . '--' . str_replace(' ', '-', $request->image->getClientOriginalName());
+
+
+                Storage::putFileAs('/', $request->file('image'), $filename);
             }
 
             if ($user) {
                 $user->update([
                     'name' => $request->name,
+                    'image' => $filename,
                 ]);
                 return response()->json([
                     'success' => true,
                     'message' => 'Profile updated successfully',
-                    'data' => $user
+                    'data' => new UserResource($user)
                 ]);
             }
             return response()->json([
@@ -218,5 +227,84 @@ class AuthController extends Controller
         }
     }
 
+    /*****
+     * User logout and token delete
+     */
 
+    function logout(Request $request)
+    {
+        try {
+            if (!Auth::check()) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'User not authenticated'
+                ]);
+            }
+            /****
+             * @var User $user
+             */
+            $user =  Auth::user();
+            if ($user->currentAccessToken()->delete()) {
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Logout successful'
+                ]);
+            }
+
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Logout failed',
+                'error' => $th->getMessage()
+            ]);
+        }
+    }
+
+    function changePassword(Request $request)
+    {
+        $request->validation([
+            'current_password' => 'required | sting |. max:256',
+            'new_password' => 'required | string | min:6 | confirmed',
+            'new_password_confirmation' => 'required | string | min:6'
+
+        ]);
+
+        try {
+            /****
+             * @var User $user
+             */
+            $user = Auth::user();
+            if ($user) {
+                if (password_verify($request->current_password, $user->password)) {
+                    $user->update(['password' => bcrypt($request->new_password)]);
+                    return response()->json([
+                        'success' => true,
+                        'message' => 'Password changed successfully'
+                    ]);
+                }
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Current password is incorrect'
+                ]);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ]);
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json([
+                'success' => false,
+                'message' => 'Password change failed',
+                'error' => $th->getMessage()
+            ]);
+        }
+    }
+
+
+    
 }
