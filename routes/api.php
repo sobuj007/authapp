@@ -25,7 +25,8 @@ Route::prefix('v1')->group(function () {
 
         // auth route-group
         Route::prefix('auth')->group(function () {
-            Route::post('changepassword', [AuthController::class, 'changepassword']);
+            Route::post('change-password', [AuthController::class, 'changepassword']);
+            Route::put('update-profile',[AuthController::class,'edit']);
             Route::post('logout', [AuthController::class, 'logout']);
         });
 

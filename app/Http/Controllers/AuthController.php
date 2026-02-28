@@ -9,6 +9,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -125,45 +126,97 @@ class AuthController extends Controller
             ]);
         }
     }
+    /**
+     * Login user and create token
+     */
 
+    function login(Request $request)
+    {
+        $request->validate([
+            'email' => 'required | string | max:256 | exists:users,email',
+            'password' => 'required | string | min:6'
+        ]);
 
-  function login(Request $request){
-    $request -> validate([
-        'email' => 'required | string | max:256 | exists:users,email',
-        'password' =>'required | string | min:6'
-    ]);
+        try {
+            if (!Auth::attempt($request->only('email', 'password'))) {
+                return  response()->json([
+                    'success' => false,
+                    'message' => 'Invalid email or password'
+                ]);
+            } else {
+                $user = User::where('email', $request->email)->first();
+                $token = $user->createToken('authapp')->plainTextToken;
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Login successful',
+                    'data' => [
+                        'info' => $user,
+                        'token' => $token
+                    ]
 
-    try {
-        if(!Auth::attempt($request -> only('email','password'))){
-            return  response() -> json([
+                ]);
+            }
+        } catch (\Throwable $th) {
+            //throw $th;
+            return response()->json([
                 'success' => false,
-                'message' => 'Invalid email or password']);
+                'message' => 'Login failed',
+                'error' => $th->getMessage()
+            ]);
         }
-        else{
-            $user = User::where('email', $request -> email)-> where('password', bcrypt($request -> password))->first();
-        $token = $user -> createToken('authapp') -> plainTextToken;
-        return response() ->json([
-            'success' => true,
-            'message' => 'Login successful',
-           'data' =>[
-            'info'=> $user,
-            'token' => $token
-           ]
+    }
+    
+    /***
+     *  user edit .........
+     */
 
-           ]);
+    function edit(Request $request)
+    {
+        $request->validate([
+            'name' => 'required | string | max:256',
+            'email' => 'required | string | max:256 | unique:users,email,' . Auth::id(),
+            'image' => 'nullable | string | image'
 
+        ]);
+
+        try {
+            /**
+             * @var User $user
+             */
+
+            $user = Auth::user();
+            $filname = $user->image;
+            if ($request->file('image')) {
+                Storage::delete($filname);
+                $filename = time().'--'.str_replace('','-',$request ->file('image') -> getClientOriginalName());
+                Storage::putFileAs('/',$$request ->file('image'),$filename);
+            }
+
+            if ($user) {
+                $user->update([
+                    'name' => $request->name,
+                ]);
+                return response()->json([
+                    'success' => true,
+                    'message' => 'Profile updated successfully',
+                    'data' => $user
+                ]);
+            }
+            return response()->json([
+                'success' => false,
+                'message' => 'User not found'
+            ]);
+            //code...
+        } catch (\Throwable $th) {
+            //throw $th;
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Profile update failed',
+                'error' => $th->getMessage()
+            ]);
         }
-        
-
-
-    } catch (\Throwable $th) {
-        //throw $th;
-        return response()->json([
-            'success' => false,
-            'message' => 'Login failed',
-            'error' => $th->getMessage()
-        ]); 
     }
 
-  }
+
 }
