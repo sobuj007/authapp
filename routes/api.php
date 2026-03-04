@@ -22,7 +22,12 @@ Route::prefix('v1')->group(function () {
 
     // protected routegroup
     Route::middleware('auth:sanctum')->group(function () {
-
+        Route::middleware('admin')-> group(function(){
+            return response()->json([
+                'success' => true,
+                'message' => 'Welcome to the admin dashboard'
+            ]);
+        });
         // auth route-group
         Route::prefix('auth')->group(function () {
             Route::post('change-password', [AuthController::class, 'changepassword']);
