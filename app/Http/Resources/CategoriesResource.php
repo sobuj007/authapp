@@ -16,7 +16,7 @@ class CategoriesResource extends JsonResource
     {
         $data = [
             'name' =>$this-> name,
-            'image' => asset('/',$this->imaage),
+            'image' => asset('/',$this->image),
             'description' => $this -> description,
             'created_at' => $this ->created_at->format('F j,Y')
 

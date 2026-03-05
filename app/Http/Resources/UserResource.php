@@ -18,6 +18,7 @@ class UserResource extends JsonResource
             'email'=> $this->email,
             'name' => $this -> name,
             'image' => asset('upload/'.$this -> image),
+            'role' => $this ->role,
             'created_at' => $this -> created_at -> format('F j, Y')
 
         ];
