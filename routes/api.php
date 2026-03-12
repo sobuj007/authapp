@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\Api\CatrgoriesController;
+use App\Http\Controllers\Api\TasksController;
 use App\Http\Controllers\AuthController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
@@ -36,6 +37,12 @@ Route::prefix('v1')->group(function () {
                 Route::post('create', [CatrgoriesController::class, 'createCategory']);
                 Route::put('update/{id}', [CatrgoriesController::class, 'updateCategory']);
                 Route::post('delete/{id}', [CatrgoriesController::class, 'deleteCategory']);
+            });
+            Route::prefix('task')->group(function(){
+                Route::get('getall',[TasksController::class,'getAll']);
+                Route::post('create',[TasksController::class,'createCategory']);
+                Route::put('update',[TasksController::class,'update']);
+
             });
        
         // auth route-group
